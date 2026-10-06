@@ -10,7 +10,6 @@ import casino.utils as utils
 from casino.types import GameContext
 from casino.utils import clear_screen, cprint, cinput, display_topbar
 from casino.accounts import Account
-from casino.stats import display_stats, GameStats
 
 ROULETTE_HEADER = """
 ┌────────────────────────────────────────────────┐
@@ -648,8 +647,8 @@ def play_european_roulette(context: GameContext) -> None:
 
     # Access account data
     accounts = [context.account]
+
     roulette = EuropeanRoulette(accounts)
-    stats = GameStats("European Roulette", context.account.balance)
     while True:
         roulette.reset_round()
         render_header(context)
@@ -658,20 +657,14 @@ def play_european_roulette(context: GameContext) -> None:
         choice = cinput("Press [Enter] to start a new round and [q] to quit: ").strip().lower()
 
         if choice in {"q", "quit"}:
-            break
-        prev_balance = context.account.balance
+            return
+
         status = roulette.submit_bets(context)
         if status == "BANKRUPT":
-            break
+            return
 
         roulette.spin_wheel(context)
         roulette.payout()
-        if context.account.balance > prev_balance:
-            stats.wins += 1
-            stats.rounds_played += 1
-        elif context.account.balance < prev_balance:
-            stats.losses += 1
-            stats.rounds_played += 1
         refresh_roulette_topbar(context)
 
         # play again?
@@ -679,7 +672,7 @@ def play_european_roulette(context: GameContext) -> None:
         if play_again in {"", "y", "yes"}:
             pass  # next round
         elif play_again in {"n", "no"}:
-            break
+            return
         else:
             play_again = prompt_with_error(
                 ctx=context,
@@ -690,6 +683,4 @@ def play_european_roulette(context: GameContext) -> None:
                 transform=lambda s: s.strip().lower(),
             )
             if play_again in {"n", "no"}:
-                break
-    stats.ending_balance = context.account.balance
-    display_stats(stats)
+                return
