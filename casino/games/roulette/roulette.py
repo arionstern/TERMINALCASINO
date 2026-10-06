@@ -9,6 +9,7 @@ import re
 from casino.types import GameContext
 from casino.utils import clear_screen, cprint, cinput, display_topbar
 from casino.accounts import Account
+from casino.stats import GameStats, display_stats
 
 ROULETTE_HEADER = """
 ┌─────────────────────────────┐
@@ -170,6 +171,9 @@ class Roulette:
         # Current round's bets
         self.bets = {}
         self.winning_value: Optional[tuple[str, str]] = None
+
+        # Session stats shown on the postgame screen
+        self.stats = GameStats("Roulette", accounts[0].balance)
 
     @staticmethod
     def normalize_color(input_value: str) -> str:
@@ -446,9 +450,12 @@ class Roulette:
             if win_multiplier > 1:
                 win_amount = bet_amount * win_multiplier
                 self.accounts[i].deposit(win_amount)
+                self.stats.wins += 1
                 cprint(f"Player {i+1}: Won {win_amount} coins.")
             else:
+                self.stats.losses += 1
                 cprint(f"Player {i+1}: Lost {bet_amount} coins.")
+            self.stats.rounds_played += 1
             
             i += 1
 
@@ -461,6 +468,7 @@ class AmericanRoulette(Roulette):
     def __init__(self, accounts: List[Account]):
         super().__init__(accounts)
         self.wheel = STANDARD_AMERICAN_ROULETTE_WHEEL
+        self.stats.game_name = "Roulette (U.S.)"
         self.valid_numbers = [number for (number, _, _, _) in self.wheel]
 
 
@@ -517,5 +525,5 @@ def play_roulette(context: GameContext) -> None:
                 continue_game = True
                 break
 
-    #cprint("Exiting roulette...")
-    #sleep(0.5)
+    roulette.stats.ending_balance = context.account.balance
+    display_stats(roulette.stats)
